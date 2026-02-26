@@ -1,0 +1,14 @@
+[tools]
+go = "1.26.0"
+
+[tasks.build]
+description = "Build the CLI"
+run = 'go build -trimpath -ldflags="-s -w" -o dist/unispeedtest ./cmd/unispeedtest'
+
+[tasks.test]
+description = "Run tests"
+run = "go test ./..."
+
+[tasks.lint]
+description = "Run vet"
+run = "go vet ./..."
