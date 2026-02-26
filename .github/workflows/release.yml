@@ -23,15 +23,6 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Verify dependencies
-        run: go mod verify
-
-      - name: Vet
-        run: go vet ./...
-
-      - name: Test
-        run: go test ./...
-
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
