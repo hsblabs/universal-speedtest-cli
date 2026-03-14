@@ -18,10 +18,32 @@ type CloudFlareMeta struct {
 	} `json:"colo"`
 }
 
+// PhaseSpec describes one throughput sample group for a measurement phase.
+type PhaseSpec struct {
+	SizeBytes int
+	Count     int
+}
+
+// LatencyMeasurement contains unloaded latency samples and any non-fatal warnings.
+type LatencyMeasurement struct {
+	Samples       []float64
+	FailedSamples int
+	Warnings      []string
+}
+
+// PhaseMeasurement contains throughput samples, loaded latency samples, and warnings.
+type PhaseMeasurement struct {
+	Speeds                []float64
+	LoadedLatencies       []float64
+	FailedSamples         int
+	LoadedLatencyFailures int
+	Warnings              []string
+}
+
 // PerfData holds timing data captured during an HTTP request.
 type PerfData struct {
-	Started      time.Time
-	TTFB         time.Time
-	Ended        time.Time
-	ServerTiming float64
+	Started            time.Time
+	TTFB               time.Time
+	Ended              time.Time
+	ServerTimingHeader string
 }

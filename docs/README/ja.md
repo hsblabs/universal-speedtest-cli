@@ -57,6 +57,8 @@ unispeedtest -pretty
 
 ## JSON 出力形式
 
+一部の測定だけ失敗した場合、該当メトリクスは `null` で出力され、`warnings` 配列に理由が入ります。これにより、本当の `0` と欠損値を区別できます。
+
 ```json
 {
   "download_mbps": 225.14,
@@ -71,7 +73,10 @@ unispeedtest -pretty
   "server_colo": "Tokyo",
   "network_asn": "AS2516",
   "network_as_org": "KDDI CORPORATION",
-  "ip": "203.0.113.10"
+  "ip": "203.0.113.10",
+  "warnings": [
+    "upload loaded latency unavailable: no samples collected"
+  ]
 }
 ```
 
