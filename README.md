@@ -57,6 +57,8 @@ unispeedtest -pretty
 
 ## JSON output shape
 
+On partial failures, affected metrics are emitted as `null` and a `warnings` array is added so callers can distinguish missing data from real zero values.
+
 ```json
 {
   "download_mbps": 225.14,
@@ -71,7 +73,10 @@ unispeedtest -pretty
   "server_colo": "Tokyo",
   "network_asn": "AS2516",
   "network_as_org": "KDDI CORPORATION",
-  "ip": "203.0.113.10"
+  "ip": "203.0.113.10",
+  "warnings": [
+    "upload loaded latency unavailable: no samples collected"
+  ]
 }
 ```
 
@@ -92,6 +97,13 @@ go build -trimpath -ldflags="-s -w" -o dist/unispeedtest ./cmd/unispeedtest
 Tips:
 
 - Set `NO_COLOR=1` to disable ANSI color output.
+
+## Releasing
+
+- Follow Conventional Commits in merged PRs (`fix:`, `feat:`, `feat!:` / `BREAKING CHANGE:`).
+- Pushes to `main` update or create a release PR via `release-please`.
+- Merging that release PR updates `version.txt` and `CHANGELOG.md`.
+- The release workflow then creates the corresponding `vX.Y.Z` tag and publishes artifacts with GoReleaser.
 
 ## License
 
