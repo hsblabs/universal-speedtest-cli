@@ -68,6 +68,17 @@ func TestResolvedVersion(t *testing.T) {
 			t.Fatalf("resolvedVersion() = %q, want %q", got, "dev")
 		}
 	})
+
+	t.Run("nil build info falls back to dev", func(t *testing.T) {
+		version = ""
+		buildInfoReader = func() (*debug.BuildInfo, bool) {
+			return nil, true
+		}
+
+		if got := resolvedVersion(); got != "dev" {
+			t.Fatalf("resolvedVersion() = %q, want %q", got, "dev")
+		}
+	})
 }
 
 func TestRunVersionFlagPrintsAndExits(t *testing.T) {

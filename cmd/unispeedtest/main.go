@@ -121,7 +121,7 @@ func resolvedVersion() string {
 	}
 
 	info, ok := buildInfoReader()
-	if ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+	if ok && info != nil && info.Main.Version != "" && info.Main.Version != "(devel)" {
 		return info.Main.Version
 	}
 
