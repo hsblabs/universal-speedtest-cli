@@ -47,12 +47,14 @@ Options:
 
 - `-json`: output compact JSON
 - `-pretty`: output indented JSON (implies `-json`)
+- `-v`, `--version`: print the CLI version and exit
 
 Examples:
 
 ```sh
 unispeedtest -json
 unispeedtest -pretty
+unispeedtest --version
 ```
 
 ## JSON output shape
