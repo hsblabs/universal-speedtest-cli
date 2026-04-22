@@ -40,6 +40,9 @@ var (
 		go func() {
 			<-sigCh
 			fmt.Fprintln(stderr, "\nInterrupted.")
+			// Intentionally exit the whole process on SIGINT (130) instead of
+			// returning through run(). Signal handling is process-wide and an
+			// immediate exit avoids leaving background goroutines or partial state.
 			os.Exit(130)
 		}()
 
