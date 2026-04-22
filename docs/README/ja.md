@@ -47,12 +47,14 @@ unispeedtest
 
 - `-json`: JSON（1行）で出力
 - `-pretty`: 整形済み JSON で出力（`-json` を含む）
+- `-v`, `--version`: CLI バージョンを表示して終了
 
 例:
 
 ```sh
 unispeedtest -json
 unispeedtest -pretty
+unispeedtest --version
 ```
 
 ## JSON 出力形式
