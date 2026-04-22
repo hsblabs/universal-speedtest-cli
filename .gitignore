@@ -24,3 +24,7 @@ vendor/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local agent/project metadata
+.serena/
+docs/plans/

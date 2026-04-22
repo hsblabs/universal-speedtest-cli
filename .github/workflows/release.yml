@@ -2,15 +2,66 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
   contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  release:
-    name: Release
+  release-please:
+    name: Release Please
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.detect.outputs.should_release }}
+      version: ${{ steps.detect.outputs.version }}
+      tag_name: ${{ steps.detect.outputs.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Run release-please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - name: Detect merged release PR
+        id: detect
+        shell: bash
+        run: |
+          changed_files="$(git show --pretty='' --name-only "$GITHUB_SHA")"
+
+          if printf '%s\n' "$changed_files" | grep -qx 'version.txt' && \
+             printf '%s\n' "$changed_files" | grep -qx 'CHANGELOG.md'; then
+            version="$(tr -d '[:space:]' < version.txt)"
+            if [ -z "$version" ]; then
+              echo "version.txt is empty" >&2
+              exit 1
+            fi
+
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+            echo "tag_name=v$version" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "should_release=false" >> "$GITHUB_OUTPUT"
+
+  goreleaser:
+    name: GoReleaser
+    needs: release-please
+    if: needs.release-please.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,11 +74,33 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Verify release commit
+        run: |
+          go mod verify
+          go vet ./...
+          go test ./...
+
+      - name: Create release tag
+        shell: bash
+        run: |
+          tag="${{ needs.release-please.outputs.tag_name }}"
+
+          if git rev-parse "$tag" >/dev/null 2>&1; then
+            existing_sha="$(git rev-list -n 1 "$tag")"
+            if [ "$existing_sha" != "$GITHUB_SHA" ]; then
+              echo "tag $tag already exists on $existing_sha, expected $GITHUB_SHA" >&2
+              exit 1
+            fi
+          else
+            git tag "$tag" "$GITHUB_SHA"
+            git push origin "$tag"
+          fi
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
-          version: '~> v2'
+          version: "~> v2"
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
