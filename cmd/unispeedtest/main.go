@@ -5,12 +5,41 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime/debug"
 
 	"github.com/hsblabs/universal-speedtest-cli/internal/cloudflare"
 	"github.com/hsblabs/universal-speedtest-cli/internal/color"
 	"github.com/hsblabs/universal-speedtest-cli/internal/reporter"
 	"github.com/hsblabs/universal-speedtest-cli/internal/stats"
 )
+
+var (
+	version         = ""
+	buildInfoReader = debug.ReadBuildInfo
+)
+
+func hasVersionFlag(args []string) bool {
+	for _, arg := range args {
+		if arg == "-v" || arg == "--version" {
+			return true
+		}
+	}
+
+	return false
+}
+
+func resolvedVersion() string {
+	if version != "" {
+		return version
+	}
+
+	info, ok := buildInfoReader()
+	if ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return info.Main.Version
+	}
+
+	return "dev"
+}
 
 func main() {
 	jsonOut := flag.Bool("json", false, "Output results in JSON format")
