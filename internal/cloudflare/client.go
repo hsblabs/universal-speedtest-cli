@@ -34,6 +34,11 @@ func MakeRequest(method, path string, payload []byte) (PerfData, error) {
 	}
 
 	trace := &httptrace.ClientTrace{
+		WroteRequest: func(info httptrace.WroteRequestInfo) {
+			if info.Err == nil {
+				pd.RequestWritten = time.Now()
+			}
+		},
 		GotFirstResponseByte: func() { pd.TTFB = time.Now() },
 	}
 	req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))

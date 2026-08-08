@@ -43,6 +43,7 @@ type PhaseMeasurement struct {
 // PerfData holds timing data captured during an HTTP request.
 type PerfData struct {
 	Started            time.Time
+	RequestWritten     time.Time
 	TTFB               time.Time
 	Ended              time.Time
 	ServerTimingHeader string

@@ -57,12 +57,17 @@ func latencySample() (float64, error) {
 		return 0, errors.New("missing first response byte timing")
 	}
 
-	serverTiming, err := ParseServerTiming(pd.ServerTimingHeader)
-	if err != nil {
-		return 0, err
+	clientDuration := pd.TTFB.Sub(pd.Started).Seconds() * 1000
+	if clientDuration <= 0 {
+		return 0, fmt.Errorf("computed non-positive client latency: %.2f ms", clientDuration)
 	}
 
-	dur := pd.TTFB.Sub(pd.Started).Seconds()*1000 - serverTiming
+	serverTiming, err := ParseServerTiming(pd.ServerTimingHeader)
+	if err != nil {
+		return clientDuration, nil
+	}
+
+	dur := clientDuration - serverTiming
 	if dur <= 0 {
 		return 0, fmt.Errorf("computed non-positive latency: %.2f ms", dur)
 	}
@@ -115,24 +120,17 @@ func uploadSample(size int, payload []byte) (float64, error, error) {
 		return 0, nil, err
 	}
 
-	serverTiming, err := ParseServerTiming(pd.ServerTimingHeader)
-	if err == nil && serverTiming > 0 {
-		return MeasureSpeed(size, serverTiming), nil, nil
+	requestDuration := pd.RequestWritten.Sub(pd.Started).Seconds() * 1000
+	if requestDuration > 0 {
+		return MeasureSpeed(size, requestDuration), nil, nil
 	}
 
 	fallbackDuration := pd.Ended.Sub(pd.Started).Seconds() * 1000
 	if fallbackDuration <= 0 {
-		if err != nil {
-			return 0, nil, err
-		}
 		return 0, nil, fmt.Errorf("computed non-positive upload duration: %.2f ms", fallbackDuration)
 	}
 
-	if err != nil {
-		return MeasureSpeed(size, fallbackDuration), fmt.Errorf("upload server timing unavailable, fell back to end-to-end duration: %w", err), nil
-	}
-
-	return MeasureSpeed(size, fallbackDuration), fmt.Errorf("upload server timing was non-positive (%.2f ms), fell back to end-to-end duration", serverTiming), nil
+	return MeasureSpeed(size, fallbackDuration), errors.New("request write timing unavailable, fell back to end-to-end duration"), nil
 }
 
 func validatePhaseSpecs(phaseType string, specs []PhaseSpec) error {
