@@ -3,6 +3,7 @@ package cloudflare
 import (
 	"bytes"
 	"io"
+	"math"
 	"net/http"
 	"net/http/httptrace"
 	"strings"
@@ -43,30 +44,40 @@ func TestUploadSampleUsesRequestWrittenTiming(t *testing.T) {
 }
 
 func TestLatencySampleFallsBackToClientTiming(t *testing.T) {
-	useTestHTTPClient(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
-		trace := httptrace.ContextClientTrace(req.Context())
-		if trace == nil || trace.GotFirstResponseByte == nil {
-			t.Fatal("request trace does not expose GotFirstResponseByte")
-		}
+	for _, serverTiming := range []string{
+		"cfSpeedEdge;dur=3",
+		"cfRequestDuration;dur=NaN",
+		"cfRequestDuration;dur=Inf",
+		"cfRequestDuration;dur=-Inf",
+		"cfRequestDuration;dur=-1000000000",
+	} {
+		t.Run(serverTiming, func(t *testing.T) {
+			useTestHTTPClient(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				trace := httptrace.ContextClientTrace(req.Context())
+				if trace == nil || trace.GotFirstResponseByte == nil {
+					t.Fatal("request trace does not expose GotFirstResponseByte")
+				}
 
-		time.Sleep(10 * time.Millisecond)
-		trace.GotFirstResponseByte()
+				time.Sleep(10 * time.Millisecond)
+				trace.GotFirstResponseByte()
 
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Header: http.Header{
-				"Server-Timing": []string{"cfSpeedEdge;dur=3"},
-			},
-			Body:    io.NopCloser(strings.NewReader("")),
-			Request: req,
-		}, nil
-	}))
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Header: http.Header{
+						"Server-Timing": []string{serverTiming},
+					},
+					Body:    io.NopCloser(strings.NewReader("")),
+					Request: req,
+				}, nil
+			}))
 
-	latency, err := latencySample()
-	if err != nil {
-		t.Fatalf("latencySample() error = %v", err)
-	}
-	if latency <= 0 {
-		t.Fatalf("latencySample() = %v, want a positive client-timed latency", latency)
+			latency, err := latencySample()
+			if err != nil {
+				t.Fatalf("latencySample() error = %v", err)
+			}
+			if math.IsNaN(latency) || math.IsInf(latency, 0) || latency <= 0 || latency >= 60_000 {
+				t.Fatalf("latencySample() = %v, want a positive finite client-timed latency", latency)
+			}
+		})
 	}
 }

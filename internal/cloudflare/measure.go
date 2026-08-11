@@ -63,16 +63,16 @@ func latencySample() (float64, error) {
 	}
 
 	serverTiming, err := ParseServerTiming(pd.ServerTimingHeader)
-	if err != nil {
-		return clientDuration, nil
+	if err == nil && !math.IsNaN(serverTiming) && !math.IsInf(serverTiming, 0) && serverTiming >= 0 {
+		dur := clientDuration - serverTiming
+		if dur <= 0 {
+			return 0, fmt.Errorf("computed non-positive latency: %.2f ms", dur)
+		}
+
+		return dur, nil
 	}
 
-	dur := clientDuration - serverTiming
-	if dur <= 0 {
-		return 0, fmt.Errorf("computed non-positive latency: %.2f ms", dur)
-	}
-
-	return dur, nil
+	return clientDuration, nil
 }
 
 // MeasureLatency sends lightweight requests and returns the unloaded latency samples in ms.
