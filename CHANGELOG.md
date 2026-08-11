@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/hsblabs/universal-speedtest-cli/compare/v0.2.1...v0.3.0) (2026-08-11)
+
+
+### Features
+
+* add HTML report timestamps and titles ([67d0bc7](https://github.com/hsblabs/universal-speedtest-cli/commit/67d0bc7f3bfbefa071ee545594d51c4b031eb391))
+* add self-contained HTML reports ([87f656d](https://github.com/hsblabs/universal-speedtest-cli/commit/87f656d87b6dd891599f464b09f8667e92e5c033))
+
 ## [0.2.1](https://github.com/hsblabs/universal-speedtest-cli/compare/v0.2.0...v0.2.1) (2026-08-11)
 
 
