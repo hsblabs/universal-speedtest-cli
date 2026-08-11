@@ -72,21 +72,26 @@ func TestPrintHTMLRendersResultAndEscapesContent(t *testing.T) {
 	network := "Example <Network>"
 
 	result := reporter.Result{
-		DownloadMbps: &download,
-		UploadMbps:   &upload,
-		PacketLoss:   &packetLoss,
-		NetworkASOrg: &network,
-		Warnings:     []string{"measurement <script>alert(1)</script>"},
+		MeasuredAtUnixMs: 1723456789012,
+		DownloadMbps:     &download,
+		UploadMbps:       &upload,
+		PacketLoss:       &packetLoss,
+		NetworkASOrg:     &network,
+		Warnings:         []string{"measurement <script>alert(1)</script>"},
 	}
 
 	var buf bytes.Buffer
-	if err := reporter.PrintHTML(&buf, result); err != nil {
+	if err := reporter.PrintHTML(&buf, result, "Home <Lab>"); err != nil {
 		t.Fatalf("PrintHTML() error = %v", err)
 	}
 
 	output := buf.String()
 	for _, want := range []string{
 		"<!doctype html>",
+		"<title>Internet Speed Report - Home &lt;Lab&gt;</title>",
+		"<h1>Internet Speed Report - Home &lt;Lab&gt;</h1>",
+		`data-unix-ms="1723456789012"`,
+		"toLocaleString()",
 		"225.14",
 		"102.87",
 		"Example &lt;Network&gt;",
@@ -99,9 +104,19 @@ func TestPrintHTMLRendersResultAndEscapesContent(t *testing.T) {
 	if strings.Contains(output, "<script>alert(1)</script>") {
 		t.Fatalf("PrintHTML() output contains unescaped warning\n%s", output)
 	}
-	for _, forbidden := range []string{"<script", " src=", " href="} {
+	for _, forbidden := range []string{" src=", " href="} {
 		if strings.Contains(output, forbidden) {
 			t.Fatalf("PrintHTML() output contains external or executable content %q\n%s", forbidden, output)
 		}
+	}
+}
+
+func TestPrintHTMLUsesDefaultTitle(t *testing.T) {
+	var buf bytes.Buffer
+	if err := reporter.PrintHTML(&buf, reporter.Result{}, ""); err != nil {
+		t.Fatalf("PrintHTML() error = %v", err)
+	}
+	if output := buf.String(); !strings.Contains(output, "<title>Internet Speed Report</title>") {
+		t.Fatalf("PrintHTML() output missing default title\n%s", output)
 	}
 }

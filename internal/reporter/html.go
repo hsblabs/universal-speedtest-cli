@@ -14,7 +14,7 @@ var htmlReportTemplate = template.Must(template.New("report").Funcs(template.Fun
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Internet Speed Report</title>
+  <title>{{.Title}}</title>
   <style>
     :root {
       color-scheme: light dark;
@@ -27,6 +27,7 @@ var htmlReportTemplate = template.Must(template.New("report").Funcs(template.Fun
     main { width: min(960px, calc(100% - 32px)); margin: 0 auto; padding: 48px 0; }
     header { margin-bottom: 24px; }
     h1 { margin: 0; font-size: clamp(1.75rem, 4vw, 2.5rem); letter-spacing: -0.04em; }
+    .measured-at { margin: 8px 0 0; color: #65718a; font-size: 0.9rem; }
     h2 { margin: 0; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #65718a; }
     .speed-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
     .card, .panel { background: #fff; border: 1px solid #dde3ed; border-radius: 16px; box-shadow: 0 8px 24px rgba(26, 39, 64, 0.06); }
@@ -59,7 +60,7 @@ var htmlReportTemplate = template.Must(template.New("report").Funcs(template.Fun
     @media (prefers-color-scheme: dark) {
       :root { color: #edf2fa; background: #101522; }
       body { background: #101522; }
-      h2, .speed-value span, .metric dt, .metric dd span, .network dt { color: #9da9bf; }
+      h2, .measured-at, .speed-value span, .metric dt, .metric dd span, .network dt { color: #9da9bf; }
       .card, .panel { background: #171e2e; border-color: #2a3448; box-shadow: none; }
       .metric { background: #101522; }
       .warnings { background: #2a2213; border-color: #765b27; }
@@ -68,7 +69,10 @@ var htmlReportTemplate = template.Must(template.New("report").Funcs(template.Fun
 </head>
 <body>
   <main>
-    <header><h1>Internet Speed Report</h1></header>
+    <header>
+      <h1>{{.Title}}</h1>
+      <p class="measured-at">Measured <time data-unix-ms="{{.MeasuredAtUnixMs}}">{{.MeasuredAtUnixMs}}</time></p>
+    </header>
 
     <section class="speed-grid" aria-label="Transfer speed">
       <article class="card speed-card download">
@@ -109,13 +113,29 @@ var htmlReportTemplate = template.Must(template.New("report").Funcs(template.Fun
     </section>
     {{end}}
   </main>
+  <script>
+    const measuredAt = document.querySelector("[data-unix-ms]");
+    const measuredAtDate = new Date(Number(measuredAt.dataset.unixMs));
+    measuredAt.dateTime = measuredAtDate.toISOString();
+    measuredAt.textContent = measuredAtDate.toLocaleString();
+  </script>
 </body>
 </html>
 `))
 
+type htmlReportData struct {
+	Result
+	Title string
+}
+
 // PrintHTML writes a self-contained HTML report to w.
-func PrintHTML(w io.Writer, r Result) error {
-	return htmlReportTemplate.Execute(w, r)
+func PrintHTML(w io.Writer, r Result, title string) error {
+	if title == "" {
+		title = "Internet Speed Report"
+	} else {
+		title = "Internet Speed Report - " + title
+	}
+	return htmlReportTemplate.Execute(w, htmlReportData{Result: r, Title: title})
 }
 
 func formatHTMLNumber(value *float64, precision int) string {

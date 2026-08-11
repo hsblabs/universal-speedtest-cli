@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime/debug"
+	"time"
 
 	"github.com/hsblabs/universal-speedtest-cli/internal/cloudflare"
 	"github.com/hsblabs/universal-speedtest-cli/internal/color"
@@ -18,7 +19,7 @@ import (
 var (
 	version         = ""
 	buildInfoReader = debug.ReadBuildInfo
-	benchmarkMain   = func(jsonOut, prettyOut bool, htmlPath string, stdout, stderr io.Writer) int {
+	benchmarkMain   = func(jsonOut, prettyOut bool, htmlPath, htmlTitle string, stdout, stderr io.Writer) int {
 		if prettyOut {
 			jsonOut = true
 		}
@@ -49,7 +50,7 @@ var (
 
 		progress("%sInitializing Cloudflare Speed Test...%s\n\n", color.Bold, color.Reset)
 
-		var result reporter.Result
+		result := reporter.Result{MeasuredAtUnixMs: time.Now().UnixMilli()}
 		var warnings []string
 
 		meta, err := cloudflare.FetchMeta()
@@ -136,7 +137,7 @@ var (
 		result.Warnings = warnings
 
 		if htmlPath != "" {
-			if err := writeHTMLReport(htmlPath, result); err != nil {
+			if err := writeHTMLReport(htmlPath, htmlTitle, result); err != nil {
 				fmt.Fprintf(stderr, "error writing HTML report: %v\n", err)
 				return 1
 			}
@@ -184,9 +185,9 @@ func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
 }
 
-func writeHTMLReport(path string, result reporter.Result) error {
+func writeHTMLReport(path, title string, result reporter.Result) error {
 	var report bytes.Buffer
-	if err := reporter.PrintHTML(&report, result); err != nil {
+	if err := reporter.PrintHTML(&report, result, title); err != nil {
 		return err
 	}
 	return os.WriteFile(path, report.Bytes(), 0o644)
@@ -204,6 +205,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	jsonOut := fs.Bool("json", false, "Output results in JSON format")
 	prettyOut := fs.Bool("pretty", false, "Output pretty-printed JSON (implies -json)")
 	htmlPath := fs.String("html", "", "Write a self-contained HTML report to path")
+	htmlTitle := fs.String("html-title", "", "Set the HTML report title suffix (requires -html)")
 
 	if err := fs.Parse(args); err != nil {
 		if err == flag.ErrHelp {
@@ -211,8 +213,12 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 2
 	}
+	if *htmlTitle != "" && *htmlPath == "" {
+		fmt.Fprintln(stderr, "error: -html-title requires -html")
+		return 2
+	}
 
-	return benchmarkMain(*jsonOut, *prettyOut, *htmlPath, stdout, stderr)
+	return benchmarkMain(*jsonOut, *prettyOut, *htmlPath, *htmlTitle, stdout, stderr)
 }
 
 func float64Ptr(value float64) *float64 {

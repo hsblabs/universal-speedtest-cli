@@ -10,6 +10,7 @@ import (
 
 // Result holds all measurements from a speed test run.
 type Result struct {
+	MeasuredAtUnixMs  int64
 	DownloadMbps      *float64
 	UploadMbps        *float64
 	UnloadedLatency   *float64

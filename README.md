@@ -46,6 +46,7 @@ unispeedtest
 Options:
 
 - `-html <path>`: write a self-contained HTML report
+- `-html-title <title>`: append a title to the HTML report (requires `-html`)
 - `-json`: output compact JSON
 - `-pretty`: output indented JSON (implies `-json`)
 - `-v`, `--version`: print the CLI version and exit
@@ -53,7 +54,7 @@ Options:
 Examples:
 
 ```sh
-unispeedtest -html report.html
+unispeedtest -html report.html -html-title "Home Wi-Fi"
 unispeedtest -json
 unispeedtest -pretty
 unispeedtest --version
@@ -61,7 +62,7 @@ unispeedtest --version
 
 ## HTML report
 
-`-html <path>` writes a responsive, self-contained report with no external assets or JavaScript. Normal terminal or JSON output is preserved, so the flag can be combined with `-json` or `-pretty`. An existing file at the path is overwritten.
+`-html <path>` writes a responsive, self-contained report with no external assets. The measurement time is stored as Unix epoch milliseconds and formatted in the viewer's locale and time zone by inline JavaScript. `-html-title "Home Wi-Fi"` changes the document title and heading to `Internet Speed Report - Home Wi-Fi`. Normal terminal or JSON output is preserved, so the flag can be combined with `-json` or `-pretty`. An existing file at the path is overwritten.
 
 ## JSON output shape
 

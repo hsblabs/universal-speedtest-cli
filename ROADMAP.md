@@ -35,6 +35,7 @@ Build a fast, reliable, script-friendly speed test CLI that supports multiple pr
 ## Phase 3: CLI and Output Enhancements
 
 - [x] Add self-contained HTML report export with `-html <path>`.
+- [x] Add measurement time and an optional title to HTML reports.
 - [ ] Add machine-readable metadata (`timestamp`, `provider`, `version`).
 - [ ] Add NDJSON / compact streaming output mode for automation pipelines.
 - [ ] Add optional result export (`--out` JSON file).
