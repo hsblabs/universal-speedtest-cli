@@ -71,9 +71,12 @@ func TestLatencySampleFallsBackToClientTiming(t *testing.T) {
 				}, nil
 			}))
 
-			latency, err := latencySample()
+			latency, usedFallback, err := latencySample()
 			if err != nil {
 				t.Fatalf("latencySample() error = %v", err)
+			}
+			if !usedFallback {
+				t.Fatal("latencySample() used server timing, want client timing fallback")
 			}
 			if math.IsNaN(latency) || math.IsInf(latency, 0) || latency <= 0 || latency >= 60_000 {
 				t.Fatalf("latencySample() = %v, want a positive finite client-timed latency", latency)

@@ -1,0 +1,28 @@
+name: Cloudflare contract
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cloudflare-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run live Cloudflare contract test
+        run: go test -count=1 -tags=cloudflare_live ./internal/cloudflare -run '^TestCloudflareLiveContract$'

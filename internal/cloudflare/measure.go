@@ -16,6 +16,8 @@ import (
 
 const unloadedLatencySampleCount = 20
 
+var errClientTimingFallback = errors.New("server timing unavailable; used client timing")
+
 type sampleFailureTracker struct {
 	count int
 	first error
@@ -48,31 +50,31 @@ func MeasureSpeed(byteCount int, durationMs float64) float64 {
 	return (float64(byteCount*8) / (durationMs / 1000)) / 1e6
 }
 
-func latencySample() (float64, error) {
+func latencySample() (float64, bool, error) {
 	pd, err := MakeRequest("GET", "/__down?bytes=0", nil)
 	if err != nil {
-		return 0, err
+		return 0, false, err
 	}
 	if pd.TTFB.IsZero() {
-		return 0, errors.New("missing first response byte timing")
+		return 0, false, errors.New("missing first response byte timing")
 	}
 
 	clientDuration := pd.TTFB.Sub(pd.Started).Seconds() * 1000
 	if clientDuration <= 0 {
-		return 0, fmt.Errorf("computed non-positive client latency: %.2f ms", clientDuration)
+		return 0, false, fmt.Errorf("computed non-positive client latency: %.2f ms", clientDuration)
 	}
 
 	serverTiming, err := ParseServerTiming(pd.ServerTimingHeader)
 	if err == nil && !math.IsNaN(serverTiming) && !math.IsInf(serverTiming, 0) && serverTiming >= 0 {
 		dur := clientDuration - serverTiming
 		if dur <= 0 {
-			return 0, fmt.Errorf("computed non-positive latency: %.2f ms", dur)
+			return 0, false, fmt.Errorf("computed non-positive latency: %.2f ms", dur)
 		}
 
-		return dur, nil
+		return dur, false, nil
 	}
 
-	return clientDuration, nil
+	return clientDuration, true, nil
 }
 
 // MeasureLatency sends lightweight requests and returns the unloaded latency samples in ms.
@@ -80,20 +82,26 @@ func MeasureLatency() LatencyMeasurement {
 	var measurements []float64
 
 	var failures sampleFailureTracker
+	var fallbacks sampleFailureTracker
 	for i := 0; i < unloadedLatencySampleCount; i++ {
-		sample, err := latencySample()
+		sample, usedFallback, err := latencySample()
 		if err != nil {
 			failures.Record(err)
 			continue
 		}
+		if usedFallback {
+			fallbacks.Record(errClientTimingFallback)
+		}
 
 		measurements = append(measurements, sample)
 	}
+	warnings := failures.Message("unloaded latency measurement failed %d time(s); first error: %v")
+	warnings = append(warnings, fallbacks.Message("unloaded latency measurement used client timing fallback %d time(s); first reason: %v")...)
 
 	return LatencyMeasurement{
 		Samples:       measurements,
 		FailedSamples: failures.count,
-		Warnings:      failures.Message("unloaded latency measurement failed %d time(s); first error: %v"),
+		Warnings:      warnings,
 	}
 }
 
@@ -157,7 +165,7 @@ func validatePhaseSpecs(phaseType string, specs []PhaseSpec) error {
 }
 
 // backgroundLatencyMonitor periodically samples latency while other measurements run.
-func backgroundLatencyMonitor(ctx context.Context, results *[]float64, failures *sampleFailureTracker) {
+func backgroundLatencyMonitor(ctx context.Context, results *[]float64, failures, fallbacks *sampleFailureTracker) {
 	ticker := time.NewTicker(200 * time.Millisecond)
 	defer ticker.Stop()
 	for {
@@ -165,10 +173,13 @@ func backgroundLatencyMonitor(ctx context.Context, results *[]float64, failures 
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			sample, err := latencySample()
+			sample, usedFallback, err := latencySample()
 			if err != nil {
 				failures.Record(err)
 				continue
+			}
+			if usedFallback {
+				fallbacks.Record(errClientTimingFallback)
 			}
 
 			*results = append(*results, sample)
@@ -188,13 +199,14 @@ func MeasurePhase(phaseType string, specs []PhaseSpec, w io.Writer) (PhaseMeasur
 	var throughputFailures sampleFailureTracker
 	var throughputWarnings sampleFailureTracker
 	var loadedLatencyFailures sampleFailureTracker
+	var loadedLatencyFallbacks sampleFailureTracker
 
 	ctx, cancel := context.WithCancel(context.Background())
 	var monitorWG sync.WaitGroup
 	monitorWG.Add(1)
 	go func() {
 		defer monitorWG.Done()
-		backgroundLatencyMonitor(ctx, &loadedLatencies, &loadedLatencyFailures)
+		backgroundLatencyMonitor(ctx, &loadedLatencies, &loadedLatencyFailures, &loadedLatencyFallbacks)
 	}()
 
 	for _, spec := range specs {
@@ -243,6 +255,7 @@ func MeasurePhase(phaseType string, specs []PhaseSpec, w io.Writer) (PhaseMeasur
 	warnings := append([]string{}, throughputFailures.Message(fmt.Sprintf("%s throughput measurement failed %%d time(s); first error: %%v", phaseType))...)
 	warnings = append(warnings, throughputWarnings.Message(fmt.Sprintf("%s throughput measurement used fallback timing %%d time(s); first reason: %%v", phaseType))...)
 	warnings = append(warnings, loadedLatencyFailures.Message(fmt.Sprintf("%s loaded latency monitor failed %%d time(s); first error: %%v", phaseType))...)
+	warnings = append(warnings, loadedLatencyFallbacks.Message(fmt.Sprintf("%s loaded latency monitor used client timing fallback %%d time(s); first reason: %%v", phaseType))...)
 
 	return PhaseMeasurement{
 		Speeds:                allSpeeds,
