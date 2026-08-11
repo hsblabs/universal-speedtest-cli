@@ -40,7 +40,7 @@ jobs:
         id: detect
         shell: bash
         run: |
-          changed_files="$(git show --pretty='' --name-only "$GITHUB_SHA")"
+          changed_files="$(git diff --name-only "$GITHUB_SHA^1" "$GITHUB_SHA")"
 
           if printf '%s\n' "$changed_files" | grep -qx 'version.txt' && \
              printf '%s\n' "$changed_files" | grep -qx 'CHANGELOG.md'; then
