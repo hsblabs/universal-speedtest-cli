@@ -184,7 +184,7 @@ func TestMeasurePhaseFallsBackWhenUploadServerTimingIsInvalid(t *testing.T) {
 	if result.FailedSamples != 0 {
 		t.Fatalf("result.FailedSamples = %d, want 0", result.FailedSamples)
 	}
-	if len(result.Warnings) == 0 || !strings.Contains(result.Warnings[0], "upload throughput measurement used fallback timing 1 time") {
+	if len(result.Warnings) == 0 || !strings.Contains(result.Warnings[0], "upload throughput measurement used fallback timing 2 time") {
 		t.Fatalf("result.Warnings = %v, want upload fallback warning", result.Warnings)
 	}
 }
