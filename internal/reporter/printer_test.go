@@ -64,3 +64,44 @@ func TestPrintHumanShowsWarningsAndMissingValues(t *testing.T) {
 		}
 	}
 }
+
+func TestPrintHTMLRendersResultAndEscapesContent(t *testing.T) {
+	download := 225.14
+	upload := 102.87
+	packetLoss := 0.1
+	network := "Example <Network>"
+
+	result := reporter.Result{
+		DownloadMbps: &download,
+		UploadMbps:   &upload,
+		PacketLoss:   &packetLoss,
+		NetworkASOrg: &network,
+		Warnings:     []string{"measurement <script>alert(1)</script>"},
+	}
+
+	var buf bytes.Buffer
+	if err := reporter.PrintHTML(&buf, result); err != nil {
+		t.Fatalf("PrintHTML() error = %v", err)
+	}
+
+	output := buf.String()
+	for _, want := range []string{
+		"<!doctype html>",
+		"225.14",
+		"102.87",
+		"Example &lt;Network&gt;",
+		"measurement &lt;script&gt;alert(1)&lt;/script&gt;",
+	} {
+		if !strings.Contains(output, want) {
+			t.Fatalf("PrintHTML() output missing %q\n%s", want, output)
+		}
+	}
+	if strings.Contains(output, "<script>alert(1)</script>") {
+		t.Fatalf("PrintHTML() output contains unescaped warning\n%s", output)
+	}
+	for _, forbidden := range []string{"<script", " src=", " href="} {
+		if strings.Contains(output, forbidden) {
+			t.Fatalf("PrintHTML() output contains external or executable content %q\n%s", forbidden, output)
+		}
+	}
+}

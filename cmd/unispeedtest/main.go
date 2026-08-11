@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io"
@@ -17,7 +18,7 @@ import (
 var (
 	version         = ""
 	buildInfoReader = debug.ReadBuildInfo
-	benchmarkMain   = func(jsonOut, prettyOut bool, stdout, stderr io.Writer) int {
+	benchmarkMain   = func(jsonOut, prettyOut bool, htmlPath string, stdout, stderr io.Writer) int {
 		if prettyOut {
 			jsonOut = true
 		}
@@ -134,6 +135,14 @@ var (
 		result.Total = total
 		result.Warnings = warnings
 
+		if htmlPath != "" {
+			if err := writeHTMLReport(htmlPath, result); err != nil {
+				fmt.Fprintf(stderr, "error writing HTML report: %v\n", err)
+				return 1
+			}
+			fmt.Fprintf(stderr, "HTML report written to %s\n", htmlPath)
+		}
+
 		if verbose {
 			reporter.PrintHuman(stdout, result)
 			return 0
@@ -175,6 +184,14 @@ func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
 }
 
+func writeHTMLReport(path string, result reporter.Result) error {
+	var report bytes.Buffer
+	if err := reporter.PrintHTML(&report, result); err != nil {
+		return err
+	}
+	return os.WriteFile(path, report.Bytes(), 0o644)
+}
+
 func run(args []string, stdout, stderr io.Writer) int {
 	if hasVersionFlag(args) {
 		fmt.Fprintln(stdout, resolvedVersion())
@@ -186,6 +203,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 
 	jsonOut := fs.Bool("json", false, "Output results in JSON format")
 	prettyOut := fs.Bool("pretty", false, "Output pretty-printed JSON (implies -json)")
+	htmlPath := fs.String("html", "", "Write a self-contained HTML report to path")
 
 	if err := fs.Parse(args); err != nil {
 		if err == flag.ErrHelp {
@@ -194,7 +212,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 
-	return benchmarkMain(*jsonOut, *prettyOut, stdout, stderr)
+	return benchmarkMain(*jsonOut, *prettyOut, *htmlPath, stdout, stderr)
 }
 
 func float64Ptr(value float64) *float64 {

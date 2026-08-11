@@ -45,6 +45,7 @@ unispeedtest
 
 オプション:
 
+- `-html <path>`: 自己完結 HTML レポートを保存
 - `-json`: JSON（1行）で出力
 - `-pretty`: 整形済み JSON で出力（`-json` を含む）
 - `-v`, `--version`: CLI バージョンを表示して終了
@@ -52,10 +53,17 @@ unispeedtest
 例:
 
 ```sh
+unispeedtest -html report.html
 unispeedtest -json
 unispeedtest -pretty
 unispeedtest --version
 ```
+
+## HTML レポート
+
+`-html <path>` は、外部アセットと JavaScript を使わないレスポンシブな単一 HTML レポートを保存します。
+通常のターミナル出力や JSON 出力は維持されるため、`-json` または `-pretty` と併用できます。
+指定パスに既存ファイルがある場合は上書きします。
 
 ## JSON 出力形式
 

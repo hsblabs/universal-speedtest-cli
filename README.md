@@ -45,6 +45,7 @@ unispeedtest
 
 Options:
 
+- `-html <path>`: write a self-contained HTML report
 - `-json`: output compact JSON
 - `-pretty`: output indented JSON (implies `-json`)
 - `-v`, `--version`: print the CLI version and exit
@@ -52,10 +53,15 @@ Options:
 Examples:
 
 ```sh
+unispeedtest -html report.html
 unispeedtest -json
 unispeedtest -pretty
 unispeedtest --version
 ```
+
+## HTML report
+
+`-html <path>` writes a responsive, self-contained report with no external assets or JavaScript. Normal terminal or JSON output is preserved, so the flag can be combined with `-json` or `-pretty`. An existing file at the path is overwritten.
 
 ## JSON output shape
 

@@ -3,9 +3,13 @@ package main
 import (
 	"bytes"
 	"io"
+	"os"
+	"path/filepath"
 	"runtime/debug"
 	"strings"
 	"testing"
+
+	"github.com/hsblabs/universal-speedtest-cli/internal/reporter"
 )
 
 func TestHasVersionFlag(t *testing.T) {
@@ -89,7 +93,7 @@ func TestRunVersionFlagPrintsAndExits(t *testing.T) {
 	})
 
 	version = "v1.2.3"
-	benchmarkMain = func(jsonOut, prettyOut bool, stdout, stderr io.Writer) int {
+	benchmarkMain = func(jsonOut, prettyOut bool, htmlPath string, stdout, stderr io.Writer) int {
 		t.Fatal("benchmark path should not run for version flags")
 		return 1
 	}
@@ -118,7 +122,7 @@ func TestRunShortVersionFlagPrintsAndExits(t *testing.T) {
 	})
 
 	version = "v9.9.9"
-	benchmarkMain = func(jsonOut, prettyOut bool, stdout, stderr io.Writer) int {
+	benchmarkMain = func(jsonOut, prettyOut bool, htmlPath string, stdout, stderr io.Writer) int {
 		t.Fatal("benchmark path should not run for version flags")
 		return 1
 	}
@@ -145,7 +149,7 @@ func TestRunHelpFlagPrintsUsageAndExitsZero(t *testing.T) {
 		benchmarkMain = oldBenchmark
 	})
 
-	benchmarkMain = func(jsonOut, prettyOut bool, stdout, stderr io.Writer) int {
+	benchmarkMain = func(jsonOut, prettyOut bool, htmlPath string, stdout, stderr io.Writer) int {
 		t.Fatal("benchmark path should not run for help flags")
 		return 1
 	}
@@ -163,5 +167,46 @@ func TestRunHelpFlagPrintsUsageAndExitsZero(t *testing.T) {
 
 	if got := stderr.String(); !strings.Contains(got, "Usage of unispeedtest:") {
 		t.Fatalf("stderr = %q, want usage output", got)
+	}
+}
+
+func TestRunHTMLFlagPassesOutputPath(t *testing.T) {
+	oldBenchmark := benchmarkMain
+	t.Cleanup(func() {
+		benchmarkMain = oldBenchmark
+	})
+
+	benchmarkMain = func(jsonOut, prettyOut bool, htmlPath string, stdout, stderr io.Writer) int {
+		if htmlPath != "report.html" {
+			t.Fatalf("htmlPath = %q, want %q", htmlPath, "report.html")
+		}
+		return 0
+	}
+
+	if exitCode := run([]string{"-html", "report.html"}, io.Discard, io.Discard); exitCode != 0 {
+		t.Fatalf("run(-html report.html) exit code = %d, want 0", exitCode)
+	}
+}
+
+func TestWriteHTMLReport(t *testing.T) {
+	download := 123.4
+	path := filepath.Join(t.TempDir(), "report.html")
+	if err := os.WriteFile(path, []byte("old report"), 0o644); err != nil {
+		t.Fatalf("os.WriteFile() error = %v", err)
+	}
+
+	if err := writeHTMLReport(path, reporter.Result{DownloadMbps: &download}); err != nil {
+		t.Fatalf("writeHTMLReport() error = %v", err)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("os.ReadFile() error = %v", err)
+	}
+	if output := string(data); !strings.Contains(output, "123.40") {
+		t.Fatalf("HTML report missing download speed:\n%s", output)
+	}
+	if strings.Contains(string(data), "old report") {
+		t.Fatalf("HTML report did not replace existing file:\n%s", data)
 	}
 }
