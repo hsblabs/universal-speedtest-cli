@@ -86,6 +86,8 @@ unispeedtest --version
 
 Passing `-html-title` without `-html` is an error and exits with status 2.
 
+`--version` reports the tag baked into released binaries. A build made straight from source without that information reports `dev`.
+
 Both report formats are covered in [Output formats](./output.md).
 
 Under `-json`, progress output is suppressed so stdout stays parseable.
