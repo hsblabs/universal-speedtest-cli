@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0](https://github.com/hsblabs/universal-speedtest-cli/compare/v0.3.0...v0.4.0) (2026-08-15)
+
+
+### Features
+
+* add .context directory to .gitignore ([35d6bae](https://github.com/hsblabs/universal-speedtest-cli/commit/35d6bae2b78ed5d2e32e6ff17e4f90192e2602db))
+* add hsblabs-doc-authoring skill for OSS documentation guidance ([9d4beae](https://github.com/hsblabs/universal-speedtest-cli/commit/9d4beaee726d8a4c98995b700e503cb818f40c1e))
+
 ## [0.3.0](https://github.com/hsblabs/universal-speedtest-cli/compare/v0.2.1...v0.3.0) (2026-08-11)
 
 
