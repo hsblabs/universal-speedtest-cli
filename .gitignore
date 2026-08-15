@@ -26,5 +26,6 @@ vendor/
 Thumbs.db
 
 # Local agent/project metadata
+.context/
 .serena/
 docs/plans/
